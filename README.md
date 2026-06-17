@@ -4,6 +4,14 @@ RetentaShield is an ML-powered early warning and student retention tool designed
 
 ---
 
+## 🔗 Live Deployments
+
+* **Live Dashboard (Netlify)**: [https://student-dropout.netlify.app/](https://student-dropout.netlify.app/)
+* **Live API Backend (Render)**: [https://dropout-backend-qed7.onrender.com/health](https://dropout-backend-qed7.onrender.com/health) (Swagger UI available at `/docs`)
+
+---
+
+
 ## 🚀 Key Features
 
 1. **Early Risk Alert Dashboard**: Real-time KPI summaries for total cohort, high risk, medium risk, and low risk distributions.
@@ -106,13 +114,12 @@ This project is pre-configured for automated one-click deployments.
 2. Log in to [Render](https://render.com) and go to **Blueprints**.
 3. Click **New Blueprint Instance** and connect your repository.
 4. Render will read [render.yaml](file:///d:/Student_DropOut_Prediction/render.yaml) and automatically deploy:
-   * **Backend API** at `https://retentashield-backend.onrender.com`
-   * **Frontend Site** at `https://retentashield-frontend.onrender.com`
-5. Go to your frontend directory [script.js](file:///d:/Student_DropOut_Prediction/frontend/script.js#L6) and change `PRODUCTION_API_URL` to match your live backend URL.
+   * **Backend API** at `https://dropout-backend-qed7.onrender.com`
+5. Go to your frontend directory [script.js](file:///d:/Student_DropOut_Prediction/frontend/script.js#L6) and verify `PRODUCTION_API_URL` matches this URL.
 
 ### Option B: Netlify (Static Frontend Only)
 If hosting your frontend separately:
 1. Log in to [Netlify](https://netlify.com) and click **Add new site** -> **Import from Git**.
 2. Connect your GitHub repository.
 3. Netlify will read [netlify.toml](file:///d:/Student_DropOut_Prediction/netlify.toml) and publish the `frontend/` directory automatically.
-4. Set up your backend on Render or Railway, and update `PRODUCTION_API_URL` in `script.js`.
+4. Set up your backend on Render (configured at `https://dropout-backend-qed7.onrender.com`), and verify `PRODUCTION_API_URL` in `script.js`.

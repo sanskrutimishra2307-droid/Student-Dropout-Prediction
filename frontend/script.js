@@ -4,7 +4,7 @@
  */
 
 // Configure your production backend API URL here after deploying the FastAPI service
-const PRODUCTION_API_URL = 'https://retentashield-backend.onrender.com'; 
+const PRODUCTION_API_URL = 'https://dropout-backend-qed7.onrender.com'; 
 
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'

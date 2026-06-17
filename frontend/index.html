@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ML-powered Student Dropout Prediction and Early Warning Dashboard for educational institutions.">
+    <title>Student Dropout Prediction & Retention Dashboard</title>
+    <!-- Google Fonts: Plus Jakarta Sans for modern aesthetics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons for premium UI icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for beautiful charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Link to external stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top-level Navigation Bar -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="logo-container">
+                <i data-lucide="graduation-cap" class="logo-icon"></i>
+                <div class="logo-pulse"></div>
+            </div>
+            <div class="brand-text">
+                <h1>RetentaShield</h1>
+                <span>Student Retention & Early Warning System</span>
+            </div>
+        </div>
+        
+        <div class="header-actions">
+            <button id="btn-open-simulator" class="btn btn-secondary">
+                <i data-lucide="sliders"></i>
+                <span>Interactive Predictor</span>
+            </button>
+            <div id="api-status" class="status-badge status-checking">
+                <span class="status-dot"></span>
+                <span class="status-text">API: Connecting</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- KPI Cards Grid -->
+        <section class="kpi-grid" aria-label="Key Performance Indicators">
+            <!-- Total Students -->
+            <div class="kpi-card" id="kpi-total-students">
+                <div class="kpi-icon-wrapper text-blue">
+                    <i data-lucide="users"></i>
+                </div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Total Student Cohort</span>
+                    <h2 class="kpi-value" id="val-total-students">-</h2>
+                </div>
+            </div>
+
+            <!-- High Risk Counts -->
+            <div class="kpi-card highlight-high-risk" id="kpi-high-risk">
+                <div class="kpi-icon-wrapper text-teal">
+                    <i data-lucide="alert-triangle"></i>
+                </div>
+                <div class="kpi-info">
+                    <span class="kpi-label">High Risk (≥70%)</span>
+                    <h2 class="kpi-value" id="val-high-risk">-</h2>
+                    <span class="kpi-subtext" id="val-high-risk-pct">-</span>
+                </div>
+            </div>
+
+            <!-- Medium Risk Counts -->
+            <div class="kpi-card" id="kpi-medium-risk">
+                <div class="kpi-icon-wrapper text-amber">
+                    <i data-lucide="alert-circle"></i>
+                </div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Medium Risk (40–69%)</span>
+                    <h2 class="kpi-value" id="val-medium-risk">-</h2>
+                    <span class="kpi-subtext" id="val-medium-risk-pct">-</span>
+                </div>
+            </div>
+
+            <!-- Low Risk Counts -->
+            <div class="kpi-card" id="kpi-low-risk">
+                <div class="kpi-icon-wrapper text-green">
+                    <i data-lucide="check-circle-2"></i>
+                </div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Low Risk (<40%)</span>
+                    <h2 class="kpi-value" id="val-low-risk">-</h2>
+                    <span class="kpi-subtext" id="val-low-risk-pct">-</span>
+                </div>
+            </div>
+
+            <!-- Model Performance Card -->
+            <div class="kpi-card performance-card" id="kpi-performance">
+                <div class="kpi-icon-wrapper text-violet">
+                    <i data-lucide="cpu"></i>
+                </div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Model Accuracy / F1</span>
+                    <h2 class="kpi-value" id="val-model-performance">-</h2>
+                    <span class="kpi-subtext">XGBoost 3-Class Model</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-grid" aria-label="Analytics Visualizations">
+            <!-- Course Breakdown Chart -->
+            <div class="chart-card card">
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <i data-lucide="bar-chart-3" class="card-icon"></i>
+                        <h3>Course-wise Risk Distribution</h3>
+                    </div>
+                    <span class="card-subtitle">Cohort sizes & risk levels per department</span>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="chart-courses"></canvas>
+                </div>
+            </div>
+
+            <!-- Gender Breakdown Chart -->
+            <div class="chart-card card">
+                <div class="card-header">
+                    <div class="card-header-title">
+                        <i data-lucide="pie-chart" class="card-icon"></i>
+                        <h3>Gender-wise Risk Breakdown</h3>
+                    </div>
+                    <span class="card-subtitle">Risk proportion comparison</span>
+                </div>
+                <div class="chart-wrapper doughnut-wrapper">
+                    <canvas id="chart-gender"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Student Directory / Table Section -->
+        <section class="table-section card" aria-label="Student Directory">
+            <div class="card-header table-header">
+                <div class="card-header-title">
+                    <i data-lucide="list-filter" class="card-icon"></i>
+                    <h3>Student Roster & Risk Index</h3>
+                </div>
+                <div class="table-actions-summary">
+                    Showing <span id="val-visible-students" class="bold">0</span> of <span id="val-filtered-total" class="bold">0</span> students matching filters
+                </div>
+            </div>
+
+            <!-- Filters Toolbar -->
+            <div class="filters-toolbar">
+                <!-- Search Box -->
+                <div class="search-box">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="filter-search" placeholder="Search by student index..." aria-label="Search by student index">
+                    <button id="btn-clear-search" class="btn-clear-input" style="display: none;">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-selects">
+                    <div class="select-wrapper">
+                        <i data-lucide="alert-triangle" class="select-icon"></i>
+                        <select id="filter-risk-tier" aria-label="Filter by Risk Tier">
+                            <option value="">All Risk Tiers</option>
+                            <option value="High">High Risk (≥70%)</option>
+                            <option value="Medium">Medium Risk (40–69%)</option>
+                            <option value="Low">Low Risk (<40%)</option>
+                        </select>
+                    </div>
+
+                    <div class="select-wrapper">
+                        <i data-lucide="book-open" class="select-icon"></i>
+                        <select id="filter-course" aria-label="Filter by Course">
+                            <option value="">All Courses</option>
+                            <!-- Dynamic course options loaded on startup -->
+                        </select>
+                    </div>
+
+                    <div class="select-wrapper">
+                        <i data-lucide="arrow-up-down" class="select-icon"></i>
+                        <select id="sort-by" aria-label="Sort by field">
+                            <option value="risk_score">Sort by: Risk Score</option>
+                            <option value="index">Sort by: Student Index</option>
+                            <option value="age">Sort by: Age at Enrollment</option>
+                            <option value="admission_grade">Sort by: Admission Grade</option>
+                        </select>
+                    </div>
+
+                    <button id="btn-toggle-sort-order" class="btn btn-icon-only" title="Toggle Sort Order" aria-label="Toggle Sort Order">
+                        <i data-lucide="arrow-down-narrow-wide" id="icon-sort-order"></i>
+                    </button>
+                    
+                    <button id="btn-reset-filters" class="btn btn-tertiary" title="Reset Filters">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="table-responsive">
+                <table class="students-table" id="students-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="col-index">Index</th>
+                            <th scope="col" class="col-course">Course Enrolled</th>
+                            <th scope="col" class="col-gender">Gender</th>
+                            <th scope="col" class="col-age">Age</th>
+                            <th scope="col" class="col-grade">Admission Grade</th>
+                            <th scope="col" class="col-risk">Dropout Risk Score</th>
+                            <th scope="col" class="col-tier">Risk Level</th>
+                            <th scope="col" class="col-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Table rows populated dynamically by Javascript -->
+                        <tr class="table-loading-row">
+                            <td colspan="8">
+                                <div class="table-skeleton-container">
+                                    <div class="skeleton-line"></div>
+                                    <div class="skeleton-line"></div>
+                                    <div class="skeleton-line"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer & Pagination -->
+            <div class="table-footer">
+                <div class="page-size-selector">
+                    <label for="page-size-select">Rows per page:</label>
+                    <select id="page-size-select">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+
+                <nav class="pagination-controls" aria-label="Pagination Navigation">
+                    <button id="btn-prev-page" class="btn btn-secondary btn-pagination" disabled>
+                        <i data-lucide="chevron-left"></i>
+                        <span>Prev</span>
+                    </button>
+                    <span class="pagination-info">
+                        Page <strong id="val-current-page">1</strong> of <strong id="val-total-pages">1</strong>
+                    </span>
+                    <button id="btn-next-page" class="btn btn-secondary btn-pagination" disabled>
+                        <span>Next</span>
+                        <i data-lucide="chevron-right"></i>
+                    </button>
+                </nav>
+            </div>
+        </section>
+    </main>
+
+    <!-- Student Detail Modal (Explainable Prediction View) -->
+    <div id="modal-student-detail" class="modal-overlay" aria-hidden="true">
+        <div class="modal-container modal-large scale-up-center" role="dialog" aria-modal="true" aria-labelledby="modal-student-title">
+            <button class="modal-close" id="btn-close-detail-modal" aria-label="Close modal">
+                <i data-lucide="x"></i>
+            </button>
+            
+            <div class="modal-header">
+                <div class="modal-header-title">
+                    <i data-lucide="user-check" class="modal-icon"></i>
+                    <div>
+                        <h2 id="modal-student-title">Student Profile Analysis</h2>
+                        <p class="modal-subtitle">Comprehensive ML analysis and early retention profile</p>
+                    </div>
+                </div>
+                <div id="detail-risk-badge" class="risk-badge badge-high-risk">
+                    HIGH RISK
+                </div>
+            </div>
+
+            <div class="modal-body student-detail-grid">
+                <!-- Left Panel: Profile Information -->
+                <div class="detail-section student-profile-card">
+                    <div class="section-title">
+                        <i data-lucide="user"></i>
+                        <h4>Student Profile Info</h4>
+                    </div>
+                    
+                    <div class="profile-data-list">
+                        <div class="profile-item">
+                            <span class="profile-label">Student Index</span>
+                            <span class="profile-val bold" id="detail-student-index">-</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Course</span>
+                            <span class="profile-val" id="detail-student-course">-</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Gender</span>
+                            <span class="profile-val" id="detail-student-gender">-</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Age at Enrollment</span>
+                            <span class="profile-val" id="detail-student-age">-</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">Admission Grade</span>
+                            <span class="profile-val bold" id="detail-student-admission">-</span>
+                        </div>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div class="section-title">
+                        <i data-lucide="book-open"></i>
+                        <h4>Academic Performance</h4>
+                    </div>
+
+                    <div class="profile-data-list">
+                        <div class="profile-item">
+                            <span class="profile-label">1st Sem Approved Units</span>
+                            <span class="profile-val bold" id="detail-student-cu1-app">-</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-label">2nd Sem Approved Units</span>
+                            <span class="profile-val bold" id="detail-student-cu2-app">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="simulator-trigger-box">
+                        <button id="btn-detail-tweak" class="btn btn-primary btn-full-width">
+                            <i data-lucide="edit-3"></i>
+                            <span>Tweak Features in Simulator</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Middle Panel: Model Prediction Gauges & Probabilities -->
+                <div class="detail-section risk-gauge-section">
+                    <div class="section-title">
+                        <i data-lucide="activity"></i>
+                        <h4>Risk Score & Multi-Class Probabilities</h4>
+                    </div>
+
+                    <div class="gauge-display-container">
+                        <div class="gauge-radial-progress" id="detail-gauge-circle">
+                            <div class="gauge-value-box">
+                                <span class="gauge-number" id="detail-risk-score-val">0%</span>
+                                <span class="gauge-desc">Dropout Risk</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="probability-bars">
+                        <h5>Model Output Probability Distribution</h5>
+                        <!-- Dropout -->
+                        <div class="prob-bar-container">
+                            <div class="prob-bar-header">
+                                <span>Dropout (Model Prediction)</span>
+                                <span id="val-prob-dropout">0.00%</span>
+                            </div>
+                            <div class="prob-bar-track">
+                                <div class="prob-bar-fill fill-dropout" id="bar-prob-dropout" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <!-- Enrolled -->
+                        <div class="prob-bar-container">
+                            <div class="prob-bar-header">
+                                <span>Enrolled (Active status)</span>
+                                <span id="val-prob-enrolled">0.00%</span>
+                            </div>
+                            <div class="prob-bar-track">
+                                <div class="prob-bar-fill fill-enrolled" id="bar-prob-enrolled" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <!-- Graduate -->
+                        <div class="prob-bar-container">
+                            <div class="prob-bar-header">
+                                <span>Graduate (Success output)</span>
+                                <span id="val-prob-graduate">0.00%</span>
+                            </div>
+                            <div class="prob-bar-track">
+                                <div class="prob-bar-fill fill-graduate" id="bar-prob-graduate" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Explainability Features -->
+                <div class="detail-section explainability-section">
+                    <div class="section-title">
+                        <i data-lucide="help-circle"></i>
+                        <h4>Key Contributing Factors</h4>
+                    </div>
+                    <p class="section-desc-text">Global relative feature contributions computed for the XGBoost model outputs.</p>
+
+                    <div class="factors-list" id="detail-factors-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Section: Intervention Plan Banner -->
+            <div class="modal-footer intervention-banner" id="detail-intervention-banner">
+                <div class="intervention-icon-box">
+                    <i data-lucide="heart-handshake" id="intervention-icon"></i>
+                </div>
+                <div class="intervention-details">
+                    <div class="intervention-header-info">
+                        <span class="intervention-badge" id="detail-intervention-category">Category</span>
+                        <span class="intervention-urgency" id="detail-intervention-urgency">Urgency Timeframe</span>
+                    </div>
+                    <h4 class="intervention-title">Recommended Retention Strategy</h4>
+                    <p class="intervention-action-text" id="detail-intervention-action">Intervention Action Text</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Predictor Simulator Modal (Categorized Multi-Tab Form) -->
+    <div id="modal-simulator" class="modal-overlay" aria-hidden="true">
+        <div class="modal-container modal-large scale-up-center" role="dialog" aria-modal="true" aria-labelledby="modal-simulator-title">
+            <button class="modal-close" id="btn-close-simulator-modal" aria-label="Close modal">
+                <i data-lucide="x"></i>
+            </button>
+
+            <div class="modal-header">
+                <div class="modal-header-title">
+                    <i data-lucide="sliders" class="modal-icon"></i>
+                    <div>
+                        <h2 id="modal-simulator-title">Retention Risk Predictor Simulator</h2>
+                        <p class="modal-subtitle">Tweak individual features and simulate risk prediction in real-time</p>
+                    </div>
+                </div>
+                <div class="header-load-template">
+                    <label for="simulator-student-template">Load student template:</label>
+                    <div class="template-selector-group">
+                        <input type="number" id="simulator-student-template" placeholder="Index (0-4423)" min="0" max="4423" style="width: 120px;">
+                        <button id="btn-simulator-load-template" class="btn btn-secondary">Load</button>
+                        <button id="btn-simulator-random" class="btn btn-tertiary btn-icon-only" title="Load Random Student">
+                            <i data-lucide="shuffle"></i>
+                        </button>
+                        <button id="btn-simulator-demo" class="btn btn-demo" title="Fill Demo Data">Demo</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Headers -->
+            <div class="simulator-tabs">
+                <button class="tab-btn active" data-target="tab-performance">1. Curricular Performance</button>
+                <button class="tab-btn" data-target="tab-personal">2. Demographics & Personal</button>
+                <button class="tab-btn" data-target="tab-financial">3. Financial Status</button>
+                <button class="tab-btn" data-target="tab-family">4. Family & Admission</button>
+            </div>
+
+            <form id="simulator-form" class="simulator-form-body">
+                <!-- Tab 1: Academic Curricular Performance -->
+                <div class="tab-panel active" id="tab-performance">
+                    <div class="form-grid">
+                        <!-- Sem 1 Approved -->
+                        <div class="form-group">
+                            <label for="sim-cu1-approved">Curricular units 1st sem (approved)</label>
+                            <span class="field-desc">Number of credits/modules approved in the first semester</span>
+                            <input type="number" id="sim-cu1-approved" name="Curricular units 1st sem (approved)" min="0" max="30" step="1" required>
+                        </div>
+                        <!-- Sem 1 Grade -->
+                        <div class="form-group">
+                            <label for="sim-cu1-grade">Curricular units 1st sem (grade)</label>
+                            <span class="field-desc">First semester average grade (scale 0-20)</span>
+                            <input type="number" id="sim-cu1-grade" name="Curricular units 1st sem (grade)" min="0" max="20" step="0.01" required>
+                        </div>
+                        <!-- Sem 1 Enrolled -->
+                        <div class="form-group">
+                            <label for="sim-cu1-enrolled">Curricular units 1st sem (enrolled)</label>
+                            <span class="field-desc">First semester credit modules enrolled</span>
+                            <input type="number" id="sim-cu1-enrolled" name="Curricular units 1st sem (enrolled)" min="0" max="30" step="1" required>
+                        </div>
+                        <!-- Sem 1 Evaluations -->
+                        <div class="form-group">
+                            <label for="sim-cu1-evaluations">Curricular units 1st sem (evaluations)</label>
+                            <span class="field-desc">First semester assessment counts (exams/tests)</span>
+                            <input type="number" id="sim-cu1-evaluations" name="Curricular units 1st sem (evaluations)" min="0" max="50" step="1" required>
+                        </div>
+                        
+                        <!-- Sem 2 Approved -->
+                        <div class="form-group">
+                            <label for="sim-cu2-approved">Curricular units 2nd sem (approved)</label>
+                            <span class="field-desc">Number of credits/modules approved in the second semester</span>
+                            <input type="number" id="sim-cu2-approved" name="Curricular units 2nd sem (approved)" min="0" max="30" step="1" required>
+                        </div>
+                        <!-- Sem 2 Grade -->
+                        <div class="form-group">
+                            <label for="sim-cu2-grade">Curricular units 2nd sem (grade)</label>
+                            <span class="field-desc">Second semester average grade (scale 0-20)</span>
+                            <input type="number" id="sim-cu2-grade" name="Curricular units 2nd sem (grade)" min="0" max="20" step="0.01" required>
+                        </div>
+                        <!-- Sem 2 Enrolled -->
+                        <div class="form-group">
+                            <label for="sim-cu2-enrolled">Curricular units 2nd sem (enrolled)</label>
+                            <span class="field-desc">Second semester credit modules enrolled</span>
+                            <input type="number" id="sim-cu2-enrolled" name="Curricular units 2nd sem (enrolled)" min="0" max="30" step="1" required>
+                        </div>
+                        <!-- Sem 2 Evaluations -->
+                        <div class="form-group">
+                            <label for="sim-cu2-evaluations">Curricular units 2nd sem (evaluations)</label>
+                            <span class="field-desc">Second semester assessment counts (exams/tests)</span>
+                            <input type="number" id="sim-cu2-evaluations" name="Curricular units 2nd sem (evaluations)" min="0" max="50" step="1" required>
+                        </div>
+
+                        <!-- Credited / Without evaluations -->
+                        <div class="form-group">
+                            <label for="sim-cu1-credited">Curricular units 1st sem (credited)</label>
+                            <span class="field-desc">Number of credits/modules transferred or credited in the first semester</span>
+                            <input type="number" id="sim-cu1-credited" name="Curricular units 1st sem (credited)" min="0" max="30" step="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-cu1-without">Curricular units 1st sem (without evaluations)</label>
+                            <span class="field-desc">Number of enrolled first semester modules not subject to assessment</span>
+                            <input type="number" id="sim-cu1-without" name="Curricular units 1st sem (without evaluations)" min="0" max="20" step="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-cu2-credited">Curricular units 2nd sem (credited)</label>
+                            <span class="field-desc">Number of credits/modules transferred or credited in the second semester</span>
+                            <input type="number" id="sim-cu2-credited" name="Curricular units 2nd sem (credited)" min="0" max="30" step="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-cu2-without">Curricular units 2nd sem (without evaluations)</label>
+                            <span class="field-desc">Number of enrolled second semester modules not subject to assessment</span>
+                            <input type="number" id="sim-cu2-without" name="Curricular units 2nd sem (without evaluations)" min="0" max="20" step="1" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Demographics & Personal -->
+                <div class="tab-panel" id="tab-personal">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="sim-age">Age at enrollment</label>
+                            <input type="number" id="sim-age" name="Age at enrollment" min="15" max="80" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-gender">Gender</label>
+                            <select id="sim-gender" name="Gender" required>
+                                <option value="0">Female</option>
+                                <option value="1">Male</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-marital">Marital Status</label>
+                            <select id="sim-marital" name="Marital Status" required>
+                                <option value="1">Single</option>
+                                <option value="2">Married</option>
+                                <option value="3">Widower</option>
+                                <option value="4">Divorced</option>
+                                <option value="5">Facto Union</option>
+                                <option value="6">Legally Separated</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-nationality">Nationality</label>
+                            <select id="sim-nationality" name="Nacionality" required>
+                                <option value="1">Portuguese</option>
+                                <option value="2">Brazilian</option>
+                                <option value="6">Spanish</option>
+                                <option value="11">Cape Verdean</option>
+                                <option value="13">Angolan</option>
+                                <option value="14">Guinean</option>
+                                <option value="17">Mozambican</option>
+                                <option value="21">Santomean</option>
+                                <option value="22">East Timorese</option>
+                                <option value="41">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-displaced">Displaced</label>
+                            <span class="field-desc">Is the student living away from home?</span>
+                            <select id="sim-displaced" name="Displaced" required>
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-international">International Student</label>
+                            <select id="sim-international" name="International" required>
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-special-needs">Educational special needs</label>
+                            <select id="sim-special-needs" name="Educational special needs" required>
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-attendance-schedule">Daytime/evening attendance</label>
+                            <select id="sim-attendance-schedule" name="Daytime/evening attendance" required>
+                                <option value="1">Daytime</option>
+                                <option value="0">Evening</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Financial Status & Macroeconomics -->
+                <div class="tab-panel" id="tab-financial">
+                    <div class="form-grid">
+                        <div class="form-group highlight-input">
+                            <label for="sim-debtor">Debtor</label>
+                            <span class="field-desc">Does the student have outstanding fee arrears?</span>
+                            <select id="sim-debtor" name="Debtor" required>
+                                <option value="0">No (Clear of Debt)</option>
+                                <option value="1">Yes (In Debt)</option>
+                            </select>
+                        </div>
+                        <div class="form-group highlight-input">
+                            <label for="sim-tuition-up-to-date">Tuition fees up to date</label>
+                            <span class="field-desc">Is the current fee schedule fully settled?</span>
+                            <select id="sim-tuition-up-to-date" name="Tuition fees up to date" required>
+                                <option value="1">Yes (Up to date)</option>
+                                <option value="0">No (Delayed)</option>
+                            </select>
+                        </div>
+                        <div class="form-group highlight-input">
+                            <label for="sim-scholarship">Scholarship holder</label>
+                            <select id="sim-scholarship" name="Scholarship holder" required>
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-unemployment">Unemployment rate</label>
+                            <span class="field-desc">Current local unemployment rate (%)</span>
+                            <input type="number" id="sim-unemployment" name="Unemployment rate" min="0" max="30" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-inflation">Inflation rate</label>
+                            <span class="field-desc">Current local inflation rate (%)</span>
+                            <input type="number" id="sim-inflation" name="Inflation rate" min="-10" max="30" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-gdp">GDP Growth</label>
+                            <span class="field-desc">Current local GDP index growth (%)</span>
+                            <input type="number" id="sim-gdp" name="GDP" min="-15" max="15" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Family Background & Admission info -->
+                <div class="tab-panel" id="tab-family">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="sim-course">Course Enrolled</label>
+                            <select id="sim-course" name="Course" required>
+                                <option value="171">Animation and Multimedia Design</option>
+                                <option value="9500">Nursing</option>
+                                <option value="9119">Informatics Engineering</option>
+                                <option value="9238">Social Service</option>
+                                <option value="9147">Management</option>
+                                <option value="9254">Tourism</option>
+                                <option value="9070">Communication Design</option>
+                                <option value="9773">Journalism and Communication</option>
+                                <option value="9003">Agronomy</option>
+                                <option value="9670">Advertising & Marketing Management</option>
+                                <option value="9085">Veterinary Nursing</option>
+                                <option value="8014">Social Service (Evening)</option>
+                                <option value="9853">Basic Education</option>
+                                <option value="9991">Management (Evening)</option>
+                                <option value="33">Biofuel Production Technologies</option>
+                                <option value="9130">Equiniculture</option>
+                                <option value="9556">Oral Hygiene</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-admission-grade">Admission grade</label>
+                            <input type="number" id="sim-admission-grade" name="Admission grade" min="0" max="200" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-previous-qual">Previous qualification</label>
+                            <select id="sim-previous-qual" name="Previous qualification" required>
+                                <option value="1">Secondary education</option>
+                                <option value="2">Higher education - degree</option>
+                                <option value="3">Higher education - master</option>
+                                <option value="4">Higher education - doctorate</option>
+                                <option value="5">Technological specialization course</option>
+                                <option value="6">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-previous-grade">Previous qualification (grade)</label>
+                            <input type="number" id="sim-previous-grade" name="Previous qualification (grade)" min="0" max="200" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-app-mode">Application mode</label>
+                            <select id="sim-app-mode" name="Application mode" required>
+                                <option value="1">General Agreement</option>
+                                <option value="2">Special Access Option</option>
+                                <option value="17">First Phase Contingent</option>
+                                <option value="43">Transfer Student</option>
+                                <option value="44">Readmission</option>
+                                <option value="18">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-app-order">Application order</label>
+                            <input type="number" id="sim-app-order" name="Application order" min="0" max="9" required>
+                        </div>
+                        
+                        <!-- Parents Qual/Occupation (Simplified selections mapped to numerical options in dataset) -->
+                        <div class="form-group">
+                            <label for="sim-mother-qual">Mother's qualification</label>
+                            <select id="sim-mother-qual" name="Mother's qualification" required>
+                                <option value="1">Secondary Education</option>
+                                <option value="3">Higher Education</option>
+                                <option value="37">Basic Education (Low)</option>
+                                <option value="19">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-father-qual">Father's qualification</label>
+                            <select id="sim-father-qual" name="Father's qualification" required>
+                                <option value="1">Secondary Education</option>
+                                <option value="3">Higher Education</option>
+                                <option value="37">Basic Education (Low)</option>
+                                <option value="19">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-mother-occ">Mother's occupation</label>
+                            <select id="sim-mother-occ" name="Mother's occupation" required>
+                                <option value="1">Administrative / Services</option>
+                                <option value="3">Unskilled Employee</option>
+                                <option value="4">Professional Specialist</option>
+                                <option value="99">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sim-father-occ">Father's occupation</label>
+                            <select id="sim-father-occ" name="Father's occupation" required>
+                                <option value="1">Administrative / Services</option>
+                                <option value="3">Unskilled Employee</option>
+                                <option value="4">Professional Specialist</option>
+                                <option value="99">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer / Action Buttons -->
+                <div class="simulator-footer">
+                    <button type="button" id="btn-simulator-reset" class="btn btn-tertiary">Reset Inputs</button>
+                    <div class="footer-primary-actions">
+                        <button type="button" id="btn-close-simulator-modal-footer" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" id="btn-simulator-submit" class="btn btn-primary">
+                            <i data-lucide="check"></i>
+                            <span>Run Risk Prediction</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script loading -->
+    <script src="script.js"></script>
+</body>
+</html>

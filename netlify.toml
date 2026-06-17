@@ -1,0 +1,12 @@
+# Netlify Configuration File
+# =========================================================================
+# This file automates the deployment of the static frontend on Netlify.
+#
+# To deploy:
+# 1. Connect your GitHub repository to Netlify.
+# 2. Netlify will read this file and serve the "frontend" directory automatically.
+# =========================================================================
+
+[build]
+  # Publish the frontend directory directly containing index.html, style.css, script.js
+  publish = "frontend"
